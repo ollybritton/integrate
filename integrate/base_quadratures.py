@@ -48,32 +48,36 @@ def _generic_gauss_kronrod(f, a, b, x, w, v, norm_func):
     g_estimate = sum([w_scaled[i] * f(x_scaled[2 * i + 1]) for i in range(len(w))])
 
     avg_of_f = gk_estimate / (b - a)
-    avg_deviation_of_f = sum(
+
+    avg_deviation_of_f = norm_func(sum(
         [w_scaled[i] * abs(f(x_scaled[i]) - avg_of_f) for i in range(len(w))]
-    )
+    ))
 
     eps = sys.float_info.epsilon
 
-    # This is the estimate of the error: here I just use the difference between the
-    # full Gauss-Kronrod quadrature and the Gauss quadrature
-    #
-    # SciPy uses a more sophisticated error estimate based on the one in QUADPACK
-    err = norm_func(g_estimate - gk_estimate)
+    # This is the error estimate as used in SciPy's implementation, which itself comes
+    # from `dqk21.f` in QUADPACK.
+
+    gk_err_estimate = norm_func(gk_estimate - g_estimate)
+
+    if avg_deviation_of_f != 0 and gk_err_estimate != 0:
+        err_estimate = avg_deviation_of_f * min(
+            1,
+            (200 * gk_err_estimate / avg_deviation_of_f)**1.5,
+        )
+    else:
+        err_estimate = gk_err_estimate
 
     # TODO: Understand why this is a good estimate of the rounding error, or what even
     # "rounding error" precisely means in the first place
-    #
-    # Just taken from SciPy
     round_err = float(norm_func(50 * eps * avg_deviation_of_f))
 
     # TODO: Also don't understand why this is necessary, surely the round_error will
     # always be zero or greater than or equal to the minimum float?
     if round_err > sys.float_info.min:
-        err = max(err, round_err)
+        err_estimate = max(err_estimate, round_err)
 
-    # Use the full Gauss-Kronrod quadrature, only needed the standard Gauss quadrature
-    # for estimating the error
-    return gk_estimate, err
+    return gk_estimate, err_estimate
 
 
 def gauss_kronrod_21(f, a, b, norm_func):
