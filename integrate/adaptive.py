@@ -42,8 +42,8 @@ def quad_vec(f, a, b, tol, quadrature, norm_func):
 
         m = (a_k + b_k) / 2
 
-        est_left, err_left, _ = quadrature(f, a_k, m, norm_func)
-        est_right, err_right, _ = quadrature(f, m, b_k, norm_func)
+        est_left, err_left = quadrature(f, a_k, m, norm_func)
+        est_right, err_right = quadrature(f, m, b_k, norm_func)
 
         global_est = global_est - est_k + est_left + est_right
         global_err = global_err - err_k + err_left + err_right
